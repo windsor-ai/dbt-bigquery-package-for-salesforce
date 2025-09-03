@@ -1,0 +1,382 @@
+version: 2
+
+models:
+  - name: stg_salesforce__campaigns
+    description: "Cleaned and standardized Salesforce campaigns data"
+    columns:
+      - name: id
+        description: "Unique identifier for the campaign"
+        tests:
+          - not_null
+          - unique
+      
+      - name: name
+        description: "Campaign name"
+        tests:
+          - not_null
+      
+      - name: type
+        description: "Type of campaign (e.g., Email, Advertisement, Conference)"
+        tests:
+          - accepted_values:
+              values: "{{ var('salesforce_campaign_types') }}"
+      
+      - name: status
+        description: "Current status of the campaign"
+        tests:
+          - accepted_values:
+              values: "{{ var('salesforce_campaign_statuses') }}"
+      
+      - name: description
+        description: "Campaign description"
+      
+      - name: created_at
+        description: "When the campaign was created"
+        tests:
+          - not_null
+      
+      - name: start_date
+        description: "Campaign start date"
+      
+      - name: end_date
+        description: "Campaign end date"
+      
+      - name: is_active
+        description: "Whether the campaign is currently active"
+      
+      - name: actual_cost
+        description: "Actual cost spent on the campaign"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "actual_cost is not null"
+      
+      - name: budgeted_cost
+        description: "Budgeted cost for the campaign"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "budgeted_cost is not null"
+      
+      - name: expected_revenue
+        description: "Expected revenue from the campaign"
+      
+      - name: campaign_duration_days
+        description: "Duration of the campaign in days"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "campaign_duration_days is not null"
+      
+      - name: owner_id
+        description: "ID of the campaign owner"
+      
+      - name: parent_id
+        description: "ID of the parent campaign if this is a sub-campaign"
+
+  - name: stg_salesforce__leads
+    description: "Cleaned and standardized Salesforce leads data"
+    columns:
+      - name: id
+        description: "Unique identifier for the lead"
+        tests:
+          - not_null
+          - unique
+      
+      - name: first_name
+        description: "Lead's first name"
+      
+      - name: last_name
+        description: "Lead's last name"
+      
+      - name: full_name
+        description: "Lead's full name"
+      
+      - name: email
+        description: "Lead's email address"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: "like '%@%'"
+              config:
+                where: "email is not null"
+      
+      - name: company
+        description: "Lead's company name"
+      
+      - name: title
+        description: "Lead's job title"
+      
+      - name: phone
+        description: "Lead's phone number"
+      
+      - name: status
+        description: "Current status of the lead"
+        tests:
+          - accepted_values:
+              values: "{{ var('salesforce_lead_statuses') }}"
+      
+      - name: source
+        description: "Source where the lead was generated"
+      
+      - name: rating
+        description: "Lead quality rating"
+        tests:
+          - accepted_values:
+              values: "{{ var('salesforce_lead_ratings') }}"
+      
+      - name: created_at
+        description: "When the lead was created"
+        tests:
+          - not_null
+      
+      - name: converted_date
+        description: "When the lead was converted"
+      
+      - name: converted_contact_id
+        description: "ID of the contact created from lead conversion"
+      
+      - name: converted_opportunity_id
+        description: "ID of the opportunity created from lead conversion"
+      
+      - name: converted_account_id
+        description: "ID of the account created from lead conversion"
+      
+      - name: is_converted
+        description: "Whether the lead has been converted"
+      
+      - name: days_to_conversion
+        description: "Number of days from lead creation to conversion"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "days_to_conversion is not null"
+      
+      - name: owner_id
+        description: "ID of the lead owner"
+
+    tests:
+      - dbt_utils.expression_is_true:
+          name: converted_leads_must_have_converted_date
+          expression: "converted_date is not null"
+          config:
+            where: "is_converted = true"
+
+  - name: stg_salesforce__contacts
+    description: "Cleaned and standardized Salesforce contacts data"
+    columns:
+      - name: id
+        description: "Unique identifier for the contact"
+        tests:
+          - not_null
+          - unique
+      
+      - name: first_name
+        description: "Contact's first name"
+      
+      - name: last_name
+        description: "Contact's last name"
+      
+      - name: full_name
+        description: "Contact's full name"
+      
+      - name: email
+        description: "Contact's email address"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "like '%@%'"
+              config:
+                where: "email is not null"
+      
+      - name: created_at
+        description: "When the contact was created"
+        tests:
+          - not_null
+      
+      - name: owner_id
+        description: "ID of the contact owner"
+        tests:
+          - not_null
+
+  - name: stg_salesforce__campaign_members
+    description: "Cleaned and standardized Salesforce campaign members data - junction table between campaigns and leads/contacts"
+    columns:
+      - name: id
+        description: "Unique identifier for the campaign member"
+        tests:
+          - not_null
+          - unique
+      
+      - name: campaign_id
+        description: "ID of the associated campaign"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_salesforce__campaigns')
+              field: id
+      
+      - name: lead_id
+        description: "ID of the associated lead (if member is a lead)"
+        tests:
+          - relationships:
+              to: ref('stg_salesforce__leads')
+              field: id
+              config:
+                where: "lead_id is not null"
+      
+      - name: contact_id
+        description: "ID of the associated contact (if member is a contact)"
+        tests:
+          - relationships:
+              to: ref('stg_salesforce__contacts')
+              field: id
+              config:
+                where: "contact_id is not null"
+      
+      - name: member_type
+        description: "Type of member: Lead or Contact"
+        tests:
+          - not_null
+          - accepted_values:
+              values: "{{ var('salesforce_campaign_member_types') }}"
+      
+      - name: status
+        description: "Campaign member status"
+        tests:
+          - accepted_values:
+              values: "{{ var('salesforce_campaign_member_statuses') }}"
+      
+      - name: has_responded
+        description: "Whether the campaign member has responded"
+      
+      - name: first_responded_date
+        description: "Date of first response"
+      
+      - name: days_to_response
+        description: "Number of days from campaign member creation to first response"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "days_to_response is not null"
+      
+      - name: created_at
+        description: "When the campaign member was created"
+        tests:
+          - not_null
+
+    tests:
+      - dbt_utils.expression_is_true:
+          name: member_must_have_lead_or_contact_id_not_both
+          expression: "(lead_id is not null and contact_id is null) or (lead_id is null and contact_id is not null)"
+      - dbt_utils.expression_is_true:
+          name: responded_members_must_have_response_date
+          expression: "first_responded_date is not null"
+          config:
+            where: "has_responded = true"
+
+  - name: stg_salesforce__opportunities
+    description: "Cleaned and standardized Salesforce opportunities data"
+    columns:
+      - name: id
+        description: "Unique identifier for the opportunity"
+        tests:
+          - not_null
+          - unique
+      
+      - name: name
+        description: "Opportunity name"
+        tests:
+          - not_null
+      
+      - name: campaign_id
+        description: "ID of the primary campaign source"
+        tests:
+          - relationships:
+              to: ref('stg_salesforce__campaigns')
+              field: id
+              config:
+                where: "campaign_id is not null"
+      
+      - name: contact_id
+        description: "ID of the primary contact"
+        tests:
+          - relationships:
+              to: ref('stg_salesforce__contacts')
+              field: id
+              config:
+                where: "contact_id is not null"
+      
+      - name: stage_name
+        description: "Current stage of the opportunity"
+        tests:
+          - not_null
+          - accepted_values:
+              values: "{{ var('salesforce_opportunity_stages') }}"
+      
+      - name: is_closed
+        description: "Whether the opportunity is closed"
+      
+      - name: is_won
+        description: "Whether the opportunity was won"
+      
+      - name: amount
+        description: "Opportunity amount"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "amount is not null"
+      
+      - name: probability
+        description: "Probability of winning (0-100)"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0 and probability <= 100"
+              config:
+                where: "probability is not null"
+      
+      - name: expected_revenue
+        description: "Expected revenue (amount × probability)"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "expected_revenue is not null"
+      
+      - name: created_at
+        description: "When the opportunity was created"
+        tests:
+          - not_null
+      
+      - name: close_date
+        description: "Expected or actual close date"
+      
+      - name: sales_cycle_days
+        description: "Number of days from creation to close"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "sales_cycle_days is not null"
+      
+      - name: owner_id
+        description: "ID of the opportunity owner"
+        tests:
+          - not_null
+
+    tests:
+      - dbt_utils.expression_is_true:
+          name: won_opportunities_must_have_close_date
+          expression: "close_date is not null"
+          config:
+            where: "is_won = true"
+      - dbt_utils.expression_is_true:
+          name: closed_opportunities_must_have_close_date
+          expression: "close_date is not null"
+          config:
+            where: "is_closed = true"

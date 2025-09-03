@@ -1,0 +1,645 @@
+version: 2
+
+models:
+  - name: int_salesforce__campaign_performance
+    description: "Aggregated campaign performance metrics combining leads, campaign members, and opportunities data"
+    columns:
+      - name: campaign_id
+        description: "Unique identifier for the campaign"
+        tests:
+          - not_null
+          - unique
+      
+      - name: campaign_name
+        description: "Campaign name"
+      
+      - name: campaign_type
+        description: "Type of campaign (e.g., Email, Advertisement, Conference)"
+      
+      - name: campaign_status
+        description: "Current status of the campaign"
+      
+      - name: actual_cost
+        description: "Actual cost spent on the campaign"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "actual_cost is not null"
+      
+      - name: budgeted_cost
+        description: "Budgeted cost for the campaign"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "budgeted_cost is not null"
+      
+      - name: expected_revenue
+        description: "Expected revenue from the campaign"
+      
+      - name: campaign_created_at
+        description: "When the campaign was created"
+      
+      - name: campaign_start_date
+        description: "Campaign start date"
+      
+      - name: campaign_end_date
+        description: "Campaign end date"
+      
+      # Lead Metrics
+      - name: total_leads_created
+        description: "Total number of leads associated with this campaign through campaign members"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      
+      - name: total_leads_converted
+        description: "Total number of leads that were successfully converted"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      
+      - name: lead_conversion_rate
+        description: "Percentage of leads that converted (total_leads_converted / total_leads_created)"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0 and lead_conversion_rate <= 1"
+              config:
+                where: "lead_conversion_rate is not null"
+      
+      - name: avg_days_to_conversion
+        description: "Average number of days from lead creation to conversion"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "avg_days_to_conversion is not null"
+      
+      # Campaign Member Metrics
+      - name: total_members
+        description: "Total number of campaign members (leads + contacts)"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      
+      - name: responded_members
+        description: "Total number of campaign members who responded"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      
+      - name: response_rate
+        description: "Percentage of campaign members who responded (responded_members / total_members)"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0 and response_rate <= 1"
+              config:
+                where: "response_rate is not null"
+      
+      - name: avg_days_to_response
+        description: "Average number of days from campaign member creation to first response"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "avg_days_to_response is not null"
+      
+      # Opportunity Metrics
+      - name: influenced_opportunities
+        description: "Total number of opportunities influenced by this campaign"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      
+      - name: won_opportunities
+        description: "Total number of opportunities that were won"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      
+      - name: total_opportunity_amount
+        description: "Total amount from all opportunities influenced by this campaign"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "total_opportunity_amount is not null"
+      
+      - name: won_opportunity_amount
+        description: "Total amount from won opportunities"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "won_opportunity_amount is not null"
+      
+      - name: avg_sales_cycle
+        description: "Average number of days from opportunity creation to close for closed opportunities"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "avg_sales_cycle is not null"
+      
+      - name: avg_days_to_opportunity
+        description: "Average number of days from campaign creation to opportunity creation"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "avg_days_to_opportunity is not null"
+      
+      # ROI Calculations
+      - name: cost_per_lead
+        description: "Cost per lead generated (actual_cost / total_leads_created)"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "cost_per_lead is not null"
+      
+      - name: cost_per_conversion
+        description: "Cost per lead conversion (actual_cost / total_leads_converted)"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "cost_per_conversion is not null"
+      
+      - name: cost_per_acquisition
+        description: "Cost per customer acquisition (actual_cost / won_opportunities)"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "cost_per_acquisition is not null"
+      
+      - name: roi_ratio
+        description: "Return on investment ratio (won_opportunity_amount / actual_cost)"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "roi_ratio is not null"
+      
+      - name: roi_percentage
+        description: "Return on investment as percentage ((won_opportunity_amount - actual_cost) / actual_cost * 100)"
+
+    tests:
+      # Custom test to ensure won opportunities doesn't exceed influenced opportunities
+      - dbt_utils.expression_is_true:
+          name: won_opportunities_not_greater_than_influenced
+          expression: "won_opportunities <= influenced_opportunities"
+      
+      # Custom test to ensure converted leads doesn't exceed total leads
+      - dbt_utils.expression_is_true:
+          name: converted_leads_not_greater_than_total
+          expression: "total_leads_converted <= total_leads_created"
+      
+      # Custom test to ensure responded members doesn't exceed total members
+      - dbt_utils.expression_is_true:
+          name: responded_members_not_greater_than_total
+          expression: "responded_members <= total_members"
+      
+      # Custom test to ensure won opportunity amount doesn't exceed total opportunity amount
+      - dbt_utils.expression_is_true:
+          name: won_amount_not_greater_than_total_amount
+          expression: "won_opportunity_amount <= total_opportunity_amount"
+      
+      # Custom test to validate ROI percentage calculation
+      - dbt_utils.expression_is_true:
+          name: roi_percentage_calculation_valid
+          expression: "abs(roi_percentage - ((won_opportunity_amount - actual_cost) / nullif(actual_cost, 0) * 100)) < 0.01"
+          config:
+            where: "actual_cost is not null and actual_cost > 0 and won_opportunity_amount is not null and roi_percentage is not null"
+
+  - name: int_salesforce__lead_journey
+    description: "Complete lead progression tracking through the sales funnel with all touchpoints and timing metrics"
+    columns:
+      - name: lead_id
+        description: "Unique identifier for the lead"
+        tests:
+          - not_null
+          - unique
+          - relationships:
+              to: ref('stg_salesforce__leads')
+              field: id
+      
+      - name: first_name
+        description: "Lead's first name"
+      
+      - name: last_name
+        description: "Lead's last name"
+      
+      - name: full_name
+        description: "Lead's full name"
+      
+      - name: email
+        description: "Lead's email address"
+      
+      - name: company
+        description: "Lead's company name"
+      
+      - name: title
+        description: "Lead's job title"
+      
+      - name: phone
+        description: "Lead's phone number"
+      
+      - name: lead_status
+        description: "Current status of the lead"
+      
+      - name: lead_source
+        description: "Source where the lead was generated"
+      
+      - name: rating
+        description: "Lead quality rating"
+      
+      - name: lead_owner_id
+        description: "ID of the lead owner"
+      
+      # Funnel Stage Tracking
+      - name: stage_1_lead_created
+        description: "Funnel stage 1: Lead Created"
+      
+      - name: stage_2_campaign_member_added
+        description: "Funnel stage 2: Campaign Member Added"
+      
+      - name: stage_3_lead_responded
+        description: "Funnel stage 3: Lead Responded to campaign"
+      
+      - name: stage_4_lead_converted
+        description: "Funnel stage 4: Lead Converted to Contact"
+      
+      - name: stage_5_opportunity_created
+        description: "Funnel stage 5: Opportunity Created"
+      
+      - name: stage_6_opportunity_outcome
+        description: "Funnel stage 6: Opportunity Won or Lost"
+      
+      # Lifecycle Dates
+      - name: lead_created_at
+        description: "When the lead was created"
+        tests:
+          - not_null
+      
+      - name: first_campaign_touch_at
+        description: "When the lead was first added to a campaign"
+      
+      - name: first_touch_response_date
+        description: "When the lead first responded to a campaign"
+      
+      - name: converted_date
+        description: "When the lead was converted to a contact"
+      
+      - name: opportunity_created_at
+        description: "When the resulting opportunity was created"
+      
+      - name: opportunity_close_date
+        description: "When the opportunity was closed (won or lost)"
+      
+      # Timing Metrics
+      - name: days_lead_to_campaign
+        description: "Number of days from lead creation to first campaign touch"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "days_lead_to_campaign is not null"
+      
+      - name: days_campaign_to_conversion
+        description: "Number of days from first campaign touch to lead conversion"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "days_campaign_to_conversion is not null"
+      
+      - name: days_conversion_to_opportunity
+        description: "Number of days from lead conversion to opportunity creation"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "days_conversion_to_opportunity is not null"
+      
+      - name: total_journey_days
+        description: "Total number of days from lead creation to opportunity close"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "total_journey_days is not null"
+      
+      # Campaign Attribution
+      - name: first_touch_campaign_id
+        description: "ID of the first campaign that touched this lead"
+        tests:
+          - relationships:
+              to: ref('stg_salesforce__campaigns')
+              field: id
+              config:
+                where: "first_touch_campaign_id is not null"
+      
+      - name: first_touch_campaign_name
+        description: "Name of the first campaign that touched this lead"
+      
+      - name: first_touch_campaign_type
+        description: "Type of the first campaign that touched this lead"
+      
+      - name: last_touch_campaign_id
+        description: "ID of the last campaign that touched this lead"
+        tests:
+          - relationships:
+              to: ref('stg_salesforce__campaigns')
+              field: id
+              config:
+                where: "last_touch_campaign_id is not null"
+      
+      - name: last_touch_campaign_name
+        description: "Name of the last campaign that touched this lead"
+      
+      - name: last_touch_campaign_type
+        description: "Type of the last campaign that touched this lead"
+      
+      - name: total_campaign_touches
+        description: "Total number of campaigns this lead was added to"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "total_campaign_touches is not null"
+      
+      - name: attribution_credit
+        description: "Attribution credit for multi-touch attribution (1/total_campaign_touches)"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "> 0 and attribution_credit <= 1"
+              config:
+                where: "attribution_credit is not null"
+      
+      # Conversion Status
+      - name: is_converted
+        description: "Whether the lead has been converted to a contact"
+      
+      - name: days_to_conversion
+        description: "Number of days from lead creation to conversion"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "days_to_conversion is not null"
+      
+      # Contact Details
+      - name: converted_contact_id
+        description: "ID of the contact created from lead conversion"
+        tests:
+          - relationships:
+              to: ref('stg_salesforce__contacts')
+              field: id
+              config:
+                where: "converted_contact_id is not null"
+      
+      - name: contact_first_name
+        description: "First name of the converted contact"
+      
+      - name: contact_last_name
+        description: "Last name of the converted contact"
+      
+      - name: contact_full_name
+        description: "Full name of the converted contact"
+      
+      - name: contact_email
+        description: "Email of the converted contact"
+      
+      - name: contact_created_at
+        description: "When the contact was created"
+      
+      - name: contact_owner_id
+        description: "ID of the contact owner"
+      
+      # Opportunity Details
+      - name: converted_opportunity_id
+        description: "ID of the opportunity created from lead conversion"
+        tests:
+          - relationships:
+              to: ref('stg_salesforce__opportunities')
+              field: id
+              config:
+                where: "converted_opportunity_id is not null"
+      
+      - name: opportunity_name
+        description: "Name of the resulting opportunity"
+      
+      - name: opportunity_primary_campaign_id
+        description: "Primary campaign ID associated with the opportunity"
+      
+      - name: opportunity_stage
+        description: "Current stage of the opportunity"
+      
+      - name: opportunity_is_closed
+        description: "Whether the opportunity is closed"
+      
+      - name: opportunity_is_won
+        description: "Whether the opportunity was won"
+      
+      - name: opportunity_amount
+        description: "Amount of the opportunity"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "opportunity_amount is not null"
+      
+      - name: opportunity_probability
+        description: "Probability of winning the opportunity (0-100)"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0 and opportunity_probability <= 100"
+              config:
+                where: "opportunity_probability is not null"
+      
+      - name: opportunity_expected_revenue
+        description: "Expected revenue from the opportunity"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "opportunity_expected_revenue is not null"
+      
+      - name: opportunity_sales_cycle_days
+        description: "Number of days from opportunity creation to close"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "opportunity_sales_cycle_days is not null"
+      
+      - name: opportunity_owner_id
+        description: "ID of the opportunity owner"
+      
+      - name: journey_completeness_score
+        description: "Score (0-1) indicating how far through the funnel the lead progressed"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0 and journey_completeness_score <= 1"
+              config:
+                where: "journey_completeness_score is not null"
+
+    tests:
+      # Funnel Stage Progression Logic Tests
+      - dbt_utils.expression_is_true:
+          name: stage_2_requires_stage_1
+          expression: "stage_1_lead_created is not null"
+          config:
+            where: "stage_2_campaign_member_added is not null"
+      
+      - dbt_utils.expression_is_true:
+          name: stage_3_requires_stage_2
+          expression: "stage_2_campaign_member_added is not null"
+          config:
+            where: "stage_3_lead_responded is not null"
+      
+      - dbt_utils.expression_is_true:
+          name: stage_4_requires_stage_1
+          expression: "stage_1_lead_created is not null"
+          config:
+            where: "stage_4_lead_converted is not null"
+      
+      - dbt_utils.expression_is_true:
+          name: stage_5_requires_stage_4
+          expression: "stage_4_lead_converted is not null"
+          config:
+            where: "stage_5_opportunity_created is not null"
+      
+      - dbt_utils.expression_is_true:
+          name: stage_6_requires_stage_5
+          expression: "stage_5_opportunity_created is not null"
+          config:
+            where: "stage_6_opportunity_outcome is not null"
+      
+      # Attribution Credit Calculation Tests
+      - dbt_utils.expression_is_true:
+          name: attribution_credit_calculation_valid
+          expression: "abs(attribution_credit - (1.0 / total_campaign_touches)) < 0.001"
+          config:
+            where: "attribution_credit is not null and total_campaign_touches is not null and total_campaign_touches > 0"
+      
+      # Converted leads must have conversion data
+      - dbt_utils.expression_is_true:
+          name: converted_leads_have_conversion_date
+          expression: "converted_date is not null"
+          config:
+            where: "is_converted = true"
+      
+      - dbt_utils.expression_is_true:
+          name: converted_leads_have_contact_id
+          expression: "converted_contact_id is not null"
+          config:
+            where: "is_converted = true"
+      
+      # Timing consistency tests
+      - dbt_utils.expression_is_true:
+          name: campaign_touch_after_lead_creation
+          expression: "first_campaign_touch_at >= lead_created_at"
+          config:
+            where: "first_campaign_touch_at is not null and lead_created_at is not null"
+      
+      - dbt_utils.expression_is_true:
+          name: conversion_after_lead_creation
+          expression: "date(converted_date) >= date(lead_created_at)"
+          config:
+            where: "converted_date is not null and lead_created_at is not null"
+      
+      - dbt_utils.expression_is_true:
+          name: opportunity_after_conversion
+          expression: "date(opportunity_created_at) >= date(converted_date)"
+          config:
+            where: "opportunity_created_at is not null and converted_date is not null"
+      
+      # Journey completeness validation
+      - dbt_utils.expression_is_true:
+          name: won_opportunities_have_max_completeness
+          expression: "journey_completeness_score = 1.0"
+          config:
+            where: "opportunity_is_won = true"
+
+  - name: int_salesforce__contact_touchpoints
+    description: "Contact touchpoints tracking campaign interactions and engagement sequence"
+    columns:
+      - name: contact_id
+        description: "Unique identifier for the contact"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_salesforce__contacts')
+              field: id
+      
+      - name: campaign_id
+        description: "Unique identifier for the campaign"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_salesforce__campaigns')
+              field: id
+      
+      - name: campaign_name
+        description: "Name of the campaign"
+      
+      - name: campaign_type
+        description: "Type of campaign (e.g., Email, Advertisement, Conference)"
+      
+      - name: has_responded
+        description: "Whether the contact has responded to the campaign"
+      
+      - name: first_responded_date
+        description: "Date when the contact first responded to the campaign"
+      
+      - name: touchpoint_date
+        description: "Date when the touchpoint occurred (campaign member created)"
+        tests:
+          - not_null
+      
+      - name: touchpoint_sequence
+        description: "Sequential number of this touchpoint for the contact (1, 2, 3, etc.)"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 1"
+      
+      - name: total_touchpoints
+        description: "Total number of touchpoints for this contact across all campaigns"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 1"
+      
+      - name: days_since_last_touch
+        description: "Number of days since the previous touchpoint for this contact (0 for first touchpoint)"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+
+    tests:
+      
+      # Ensure touchpoint_sequence doesn't exceed total_touchpoints
+      - dbt_utils.expression_is_true:
+          name: touchpoint_sequence_not_greater_than_total
+          expression: "touchpoint_sequence <= total_touchpoints"
+      
+      # Ensure first touchpoint has days_since_last_touch = 0
+      - dbt_utils.expression_is_true:
+          name: first_touchpoint_has_zero_days_since_last
+          expression: "days_since_last_touch = 0"
+          config:
+            where: "touchpoint_sequence = 1"
+      
+      # Ensure subsequent touchpoints have days_since_last_touch > 0 (unless same day)
+      - dbt_utils.expression_is_true:
+          name: subsequent_touchpoints_have_positive_days_since_last
+          expression: "days_since_last_touch >= 0"
+          config:
+            where: "touchpoint_sequence > 1"

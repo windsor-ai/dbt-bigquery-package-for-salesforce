@@ -1,0 +1,120 @@
+# ==============================================================================
+# dbt PROJECT GITIGNORE
+# dbt package for Salesforce Campaign Funnel Analysis
+# ==============================================================================
+
+# --------------------------------------
+# dbt Core Files
+# --------------------------------------
+target/
+dbt_packages/
+logs/
+.dbt/
+*.log
+
+# dbt user configuration files
+.user.yml
+.user
+profiles.yml
+
+# --------------------------------------
+# Environment & Configuration
+# --------------------------------------
+.env
+.envrc
+.env.local
+.env.development
+.env.test
+.env.production
+dbt-env
+
+# --------------------------------------
+# Database Credentials & Auth
+# --------------------------------------
+# Cloud provider service account keys
+*.json
+!dbt_project.yml
+
+# Database connection files
+*credentials*
+*.pem
+*.p12
+*.pfx
+
+# --------------------------------------
+# Python Environment (if using dbt-core)
+# --------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.python-version
+pip-log.txt
+
+# Python package management
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+
+# --------------------------------------
+# IDE & Editor Files
+# --------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Cursor AI editor
+.cursorignore
+.cursorindexingignore
+
+# --------------------------------------
+# OS Generated Files
+# --------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# --------------------------------------
+# Testing & Coverage
+# --------------------------------------
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.tox/
+
+# --------------------------------------
+# Documentation Build
+# --------------------------------------
+site/
+docs/_build/
+
+# --------------------------------------
+# Package Managers
+# --------------------------------------
+node_modules/
+package-lock.json
+yarn.lock
+
+# --------------------------------------
+# Temporary Files
+# --------------------------------------
+*.tmp
+*.temp
+.cache
+.sass-cache
+
+# --------------------------------------
+# Version Control
+# --------------------------------------
+*.orig
+*.rej

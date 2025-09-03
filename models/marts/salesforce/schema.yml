@@ -1,0 +1,607 @@
+version: 2
+
+models:
+  - name: salesforce__campaign_lead_funnel
+    description: "Executive-ready campaign funnel analytics combining performance metrics and lead journey data for campaign ROI analysis"
+    columns:
+      - name: campaign_id
+        description: "Unique identifier for the campaign"
+        tests:
+          - not_null
+          - unique
+      
+      - name: campaign_name
+        description: "Campaign name"
+      
+      - name: campaign_type
+        description: "Type of campaign (e.g., Email, Advertisement, Conference)"
+      
+      - name: campaign_status
+        description: "Current status of the campaign"
+      
+      - name: actual_cost
+        description: "Actual cost spent on the campaign"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "actual_cost is not null"
+      
+      - name: budgeted_cost
+        description: "Budgeted cost for the campaign"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "budgeted_cost is not null"
+      
+      - name: expected_revenue
+        description: "Expected revenue from the campaign"
+      
+      - name: campaign_created_date
+        description: "Date when the campaign was created (used for partitioning)"
+        tests:
+          - not_null
+      
+      - name: campaign_start_date
+        description: "Campaign start date"
+      
+      - name: campaign_end_date
+        description: "Campaign end date"
+      
+      # Funnel Volume Metrics
+      - name: funnel_stage_1_total_touched
+        description: "Total number of leads/contacts initially touched by the campaign"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      
+      - name: funnel_stage_2_leads_created
+        description: "Number of leads created and associated with the campaign"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      
+      - name: funnel_stage_3_members_responded
+        description: "Number of campaign members who responded"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      
+      - name: funnel_stage_4_leads_converted
+        description: "Number of leads that were converted to contacts"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      
+      - name: funnel_stage_5_opportunities_created
+        description: "Number of opportunities created and influenced by the campaign"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      
+      - name: funnel_stage_6_opportunities_won
+        description: "Number of opportunities that were won"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      
+      # Stage-to-Stage Conversion Rates
+      - name: conversion_rate_touch_to_lead
+        description: "Conversion rate from initial touch to lead creation"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0 and conversion_rate_touch_to_lead <= 1"
+              config:
+                where: "conversion_rate_touch_to_lead is not null"
+      
+      - name: conversion_rate_member_to_response
+        description: "Conversion rate from campaign member to response"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0 and conversion_rate_member_to_response <= 1"
+              config:
+                where: "conversion_rate_member_to_response is not null"
+      
+      - name: conversion_rate_lead_to_conversion
+        description: "Conversion rate from lead to converted contact"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0 and conversion_rate_lead_to_conversion <= 1"
+              config:
+                where: "conversion_rate_lead_to_conversion is not null"
+      
+      - name: conversion_rate_conversion_to_opportunity
+        description: "Conversion rate from converted contact to opportunity creation"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "conversion_rate_conversion_to_opportunity is not null"
+      
+      - name: conversion_rate_opportunity_to_won
+        description: "Conversion rate from opportunity to won deal"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0 and conversion_rate_opportunity_to_won <= 1"
+              config:
+                where: "conversion_rate_opportunity_to_won is not null"
+      
+      - name: overall_funnel_conversion_rate
+        description: "Overall conversion rate from initial touch to won opportunity"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0 and overall_funnel_conversion_rate <= 1"
+              config:
+                where: "overall_funnel_conversion_rate is not null"
+      
+      # Financial Metrics
+      - name: total_pipeline_generated
+        description: "Total pipeline value generated by the campaign"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "total_pipeline_generated is not null"
+      
+      - name: total_revenue_generated
+        description: "Total revenue generated from won opportunities"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "total_revenue_generated is not null"
+      
+      - name: attributed_pipeline_value
+        description: "Pipeline value attributed to this campaign using multi-touch attribution"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "attributed_pipeline_value is not null"
+      
+      - name: attributed_revenue_value
+        description: "Revenue attributed to this campaign using multi-touch attribution"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "attributed_revenue_value is not null"
+      
+      # ROI Metrics
+      - name: roi_ratio
+        description: "Return on investment ratio (revenue / cost)"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "roi_ratio is not null"
+      
+      - name: roi_percentage
+        description: "Return on investment as percentage"
+      
+      - name: net_roi_ratio
+        description: "Net return on investment ratio ((revenue - cost) / cost)"
+      
+      - name: net_revenue
+        description: "Net revenue after subtracting campaign costs"
+      
+      # Cost Efficiency Metrics
+      - name: cost_per_lead
+        description: "Cost per lead generated"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "cost_per_lead is not null"
+      
+      - name: cost_per_conversion
+        description: "Cost per lead conversion"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "cost_per_conversion is not null"
+      
+      - name: cost_per_acquisition
+        description: "Cost per customer acquisition (won opportunity)"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "cost_per_acquisition is not null"
+      
+      - name: cost_per_response
+        description: "Cost per campaign response"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "cost_per_response is not null"
+      
+      - name: cost_per_opportunity
+        description: "Cost per opportunity created"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "cost_per_opportunity is not null"
+      
+      # Velocity Metrics
+      - name: avg_days_to_conversion
+        description: "Average days from lead creation to conversion"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "avg_days_to_conversion is not null"
+      
+      - name: avg_sales_cycle
+        description: "Average sales cycle length for closed opportunities"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "avg_sales_cycle is not null"
+      
+      - name: avg_days_to_opportunity
+        description: "Average days from campaign creation to opportunity creation"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "avg_days_to_opportunity is not null"
+      
+      - name: avg_days_lead_to_campaign
+        description: "Average days from lead creation to campaign addition"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "avg_days_lead_to_campaign is not null"
+      
+      - name: avg_days_campaign_to_conversion
+        description: "Average days from campaign addition to conversion"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "avg_days_campaign_to_conversion is not null"
+      
+      - name: avg_days_conversion_to_opportunity
+        description: "Average days from conversion to opportunity creation"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "avg_days_conversion_to_opportunity is not null"
+      
+      - name: avg_total_journey_days
+        description: "Average total journey days from lead to closed opportunity"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "avg_total_journey_days is not null"
+      
+      # Performance Tiers
+      - name: response_performance_tier
+        description: "Performance tier based on response rate (Excellent/Good/Average/Poor/No Response)"
+        tests:
+          - accepted_values:
+              values: ['Excellent', 'Good', 'Average', 'Poor', 'No Response']
+      
+      - name: conversion_performance_tier
+        description: "Performance tier based on conversion rate (Excellent/Good/Average/Poor/No Conversions)"
+        tests:
+          - accepted_values:
+              values: ['Excellent', 'Good', 'Average', 'Poor', 'No Conversions']
+      
+      - name: roi_performance_tier
+        description: "Performance tier based on ROI percentage (Excellent/Good/Break Even/Poor/Loss)"
+        tests:
+          - accepted_values:
+              values: ['Excellent', 'Good', 'Break Even', 'Poor', 'Loss']
+      
+      # Data Quality Flags
+      - name: missing_cost_data
+        description: "Flag indicating missing or zero cost data"
+        tests:
+          - not_null
+      
+      - name: no_campaign_members
+        description: "Flag indicating campaigns with no members"
+        tests:
+          - not_null
+      
+      - name: future_campaign
+        description: "Flag indicating campaigns with future start dates"
+        tests:
+          - not_null
+      
+      - name: last_updated_at
+        description: "Timestamp when the record was last updated"
+        tests:
+          - not_null
+
+    tests:
+      # Funnel progression tests - each stage should be <= previous stage
+      - dbt_utils.expression_is_true:
+          name: stage_2_not_greater_than_stage_1
+          expression: "funnel_stage_2_leads_created <= funnel_stage_1_total_touched"
+      
+      - dbt_utils.expression_is_true:
+          name: stage_3_not_greater_than_stage_1
+          expression: "funnel_stage_3_members_responded <= funnel_stage_1_total_touched"
+      
+      - dbt_utils.expression_is_true:
+          name: stage_4_not_greater_than_stage_2
+          expression: "funnel_stage_4_leads_converted <= funnel_stage_2_leads_created"
+      
+      - dbt_utils.expression_is_true:
+          name: stage_5_not_greater_than_stage_4
+          expression: "funnel_stage_5_opportunities_created <= funnel_stage_4_leads_converted"
+          config:
+            where: "funnel_stage_4_leads_converted > 0"
+      
+      - dbt_utils.expression_is_true:
+          name: stage_6_not_greater_than_stage_5
+          expression: "funnel_stage_6_opportunities_won <= funnel_stage_5_opportunities_created"
+      
+      # Revenue consistency tests
+      - dbt_utils.expression_is_true:
+          name: attributed_revenue_not_greater_than_total_revenue
+          expression: "attributed_revenue_value <= total_revenue_generated"
+          config:
+            where: "attributed_revenue_value is not null and total_revenue_generated is not null"
+      
+      - dbt_utils.expression_is_true:
+          name: attributed_pipeline_not_greater_than_total_pipeline
+          expression: "attributed_pipeline_value <= total_pipeline_generated"
+          config:
+            where: "attributed_pipeline_value is not null and total_pipeline_generated is not null"
+      
+      # ROI calculation consistency
+      - dbt_utils.expression_is_true:
+          name: roi_calculation_consistency
+          expression: "abs(roi_percentage - ((total_revenue_generated - actual_cost) / nullif(actual_cost, 0) * 100)) < 0.01"
+          config:
+            where: "actual_cost is not null and actual_cost > 0 and total_revenue_generated is not null and roi_percentage is not null"
+
+  - name: salesforce__campaign_attribution_summary
+    description: "Campaign attribution summary with first-touch, last-touch, and multi-touch attribution analysis"
+    columns:
+      - name: campaign_id
+        description: "Unique identifier for the campaign"
+        tests:
+          - not_null
+          - unique
+      
+      - name: campaign_name
+        description: "Campaign name"
+      
+      - name: campaign_type
+        description: "Type of campaign (e.g., Email, Advertisement, Conference)"
+      
+      - name: campaign_status
+        description: "Current status of the campaign"
+      
+      - name: campaign_created_date
+        description: "Date when the campaign was created (used for partitioning)"
+        tests:
+          - not_null
+      
+      - name: campaign_cost
+        description: "Actual cost spent on the campaign"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "campaign_cost is not null"
+      
+      - name: budgeted_cost
+        description: "Budgeted cost for the campaign"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "budgeted_cost is not null"
+      
+      - name: expected_revenue
+        description: "Expected revenue from the campaign"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config:
+                where: "expected_revenue is not null"
+      
+      # Lead and opportunity counts
+      - name: total_leads
+        description: "Total number of leads associated with this campaign"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      
+      - name: converted_leads
+        description: "Number of leads that were converted"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      
+      - name: total_opportunities
+        description: "Total number of opportunities created"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      
+      - name: won_opportunities
+        description: "Number of opportunities that were won"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      
+      # First-touch attribution
+      - name: first_touch_pipeline
+        description: "Pipeline value from first-touch attribution"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      
+      - name: first_touch_revenue
+        description: "Revenue from first-touch attribution"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      
+      # Last-touch attribution
+      - name: last_touch_pipeline
+        description: "Pipeline value from last-touch attribution"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      
+      - name: last_touch_revenue
+        description: "Revenue from last-touch attribution"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      
+      # Multi-touch attribution
+      - name: multi_touch_pipeline
+        description: "Pipeline value from multi-touch attribution"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      
+      - name: multi_touch_revenue
+        description: "Revenue from multi-touch attribution"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      
+      # Conversion rates
+      - name: lead_conversion_rate_pct
+        description: "Lead conversion rate percentage"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0 and lead_conversion_rate_pct <= 100"
+      
+      - name: opportunity_creation_rate_pct
+        description: "Opportunity creation rate percentage"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0 and opportunity_creation_rate_pct <= 100"
+      
+      - name: opportunity_win_rate_pct
+        description: "Opportunity win rate percentage"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0 and opportunity_win_rate_pct <= 100"
+      
+      - name: response_rate_pct
+        description: "Response rate percentage"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0 and response_rate_pct <= 100"
+      
+      # ROI metrics
+      - name: first_touch_pipeline_roi
+        description: "First-touch pipeline ROI ratio"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      
+      - name: first_touch_revenue_roi
+        description: "First-touch revenue ROI ratio"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      
+      - name: last_touch_pipeline_roi
+        description: "Last-touch pipeline ROI ratio"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      
+      - name: last_touch_revenue_roi
+        description: "Last-touch revenue ROI ratio"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      
+      - name: multi_touch_pipeline_roi
+        description: "Multi-touch pipeline ROI ratio"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      
+      - name: multi_touch_revenue_roi
+        description: "Multi-touch revenue ROI ratio"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+
+    tests:
+      # Attribution consistency tests
+      - dbt_utils.expression_is_true:
+          name: converted_leads_not_greater_than_total_leads
+          expression: "converted_leads <= total_leads"
+      
+      - dbt_utils.expression_is_true:
+          name: won_opportunities_not_greater_than_total_opportunities
+          expression: "won_opportunities <= total_opportunities"
+      
+      # Attribution revenue relationships (allowing for rounding differences)
+      - dbt_utils.expression_is_true:
+          name: first_touch_revenue_not_greater_than_pipeline
+          expression: "first_touch_revenue <= first_touch_pipeline + 0.01"
+      
+      - dbt_utils.expression_is_true:
+          name: last_touch_revenue_not_greater_than_pipeline
+          expression: "last_touch_revenue <= last_touch_pipeline + 0.01"
+      
+      - dbt_utils.expression_is_true:
+          name: multi_touch_revenue_not_greater_than_pipeline
+          expression: "multi_touch_revenue <= multi_touch_pipeline + 0.01"
+      
+      # Multi-touch should be <= sum of first and last touch (allowing for rounding)
+      - dbt_utils.expression_is_true:
+          name: multi_touch_revenue_logical_bound
+          expression: "multi_touch_revenue <= first_touch_revenue + last_touch_revenue + 1.0"
+          config:
+            severity: warn
+      
+      
+      # ROI calculation validation
+      - dbt_utils.expression_is_true:
+          name: first_touch_revenue_roi_calculation_valid
+          expression: "abs(first_touch_revenue_roi - (first_touch_revenue / nullif(campaign_cost, 0))) < 0.01"
+          config:
+            where: "campaign_cost is not null and campaign_cost > 0 and first_touch_revenue_roi is not null"
+      
+      - dbt_utils.expression_is_true:
+          name: multi_touch_revenue_roi_calculation_valid
+          expression: "abs(multi_touch_revenue_roi - (multi_touch_revenue / nullif(campaign_cost, 0))) < 0.01"
+          config:
+            where: "campaign_cost is not null and campaign_cost > 0 and multi_touch_revenue_roi is not null"

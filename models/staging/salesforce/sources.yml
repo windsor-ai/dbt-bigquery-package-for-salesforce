@@ -1,0 +1,38 @@
+version: 2
+
+sources:
+  - name: salesforce
+    database: windsor-dbt-development
+    schema: Salesforce
+    description: "Salesforce data tables for campaign funnel analysis"
+    
+    tables:
+      - name: salesforce_campaigns
+        description: "Salesforce campaigns data"
+        freshness:
+          warn_after: {count: 24, period: hour}
+          error_after: {count: 48, period: hour}
+        
+      - name: salesforce_leads 
+        description: "Salesforce leads data"
+        freshness:
+          warn_after: {count: 24, period: hour}
+          error_after: {count: 48, period: hour}
+
+      - name: salesforce_contacts
+        description: "Salesforce contacts data"
+        freshness:
+          warn_after: {count: 24, period: hour}
+          error_after: {count: 48, period: hour}
+
+      - name: salesforce_campaign_members
+        description: "Salesforce campaign members data - junction table between campaigns and leads/contacts"
+        freshness:
+          warn_after: {count: 24, period: hour}
+          error_after: {count: 48, period: hour}
+
+      - name: salesforce_opportunities
+        description: "Salesforce opportunities data"
+        freshness:
+          warn_after: {count: 24, period: hour}
+          error_after: {count: 48, period: hour}

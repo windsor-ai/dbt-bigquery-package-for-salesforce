@@ -1,0 +1,297 @@
+name: 'salesforce_campaign_funnel'
+version: '1.0.0'
+config-version: 2
+
+profile: 'salesforce_campaign_funnel'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  salesforce_campaign_funnel:
+    # Staging models - materialized as views for development flexibility
+    staging:
+      +materialized: view
+      +schema: stg_salesforce
+    
+    # Intermediate models - views for development flexibility and debugging
+    intermediate:
+      +materialized: view
+      +schema: int_salesforce
+    
+    # Marts models - tables with BigQuery optimization
+    marts:
+      +materialized: table
+      +schema: marts_salesforce
+      +partition_by:
+        field: date_day
+        data_type: date
+        granularity: day
+      +cluster_by: ['campaign_id', 'account_id']
+
+vars:
+  # Schema configuration
+  staging_schema_suffix: '_stg_salesforce'
+  intermediate_schema_suffix: '_int_salesforce'
+  marts_schema_suffix: '_marts_salesforce'
+  
+  # Date range for development (adjust as needed)
+  start_date: '2020-01-01'
+  end_date: '2024-12-31'
+  
+  # Currency settings
+  target_currency: 'USD'
+  
+  # Data quality filters
+  exclude_test_campaigns: true
+  exclude_deleted_records: true
+  
+  # Source column mappings for campaigns table
+  # Override these in your profiles.yml or dbt_project.yml to match your Salesforce org's field names
+  campaigns_id_field: 'campaign_id'
+  campaigns_name_field: 'campaign_name'
+  campaigns_type_field: 'campaign_type'
+  campaigns_status_field: 'campaign_status'
+  campaigns_description_field: 'campaign_description'
+  campaigns_created_date_field: 'campaign_created_date'
+  campaigns_start_date_field: 'campaign_start_date'
+  campaigns_end_date_field: 'campaign_end_date'
+  campaigns_is_active_field: 'campaign_is_active'
+  campaigns_is_deleted_field: 'campaign_is_deleted'
+  campaigns_actual_cost_field: 'campaign_actual_cost'
+  campaigns_budgeted_cost_field: 'campaign_budgeted_cost'
+  campaigns_expected_revenue_field: 'campaign_expected_revenue'
+  campaigns_expected_response_field: 'campaign_expected_response'
+  campaigns_number_sent_field: 'campaign_number_sent'
+  campaigns_number_of_leads_field: 'campaign_number_of_leads'
+  campaigns_number_of_converted_leads_field: 'campaign_number_of_converted_leads'
+  campaigns_number_of_contacts_field: 'campaign_number_of_contacts'
+  campaigns_number_of_opportunities_field: 'campaign_number_of_opportunities'
+  campaigns_number_of_won_opportunities_field: 'campaign_number_of_won_opportunities'
+  campaigns_amount_all_opportunities_field: 'campaign_amount_all_opportunities'
+  campaigns_amount_won_opportunities_field: 'campaign_amount_won_opportunities'
+  campaigns_owner_id_field: 'campaign_owner_id'
+  campaigns_parent_id_field: 'campaign_parent_id'
+  
+  # Source column mappings for leads table
+  leads_id_field: 'lead_id'
+  leads_first_name_field: 'lead_first_name'
+  leads_last_name_field: 'lead_last_name'
+  leads_name_field: 'lead_name'
+  leads_email_field: 'lead_email'
+  leads_email_fallback_field: 'email'
+  leads_company_field: 'lead_company'
+  leads_title_field: 'lead_title'
+  leads_phone_field: 'lead_phone'
+  leads_status_field: 'lead_status'
+  leads_source_field: 'lead_lead_source'
+  leads_rating_field: 'lead_rating'
+  leads_created_date_field: 'lead_created_date'
+  leads_converted_date_field: 'lead_converted_date'
+  leads_converted_contact_id_field: 'lead_converted_contact_id'
+  leads_converted_opportunity_id_field: 'lead_converted_opportunity_id'
+  leads_converted_account_id_field: 'lead_converted_account_id'
+  leads_is_converted_field: 'lead_is_converted'
+  leads_is_deleted_field: 'lead_is_deleted'
+  leads_owner_id_field: 'lead_owner_id'
+  leads_industry_field: 'lead_industry'
+  leads_annual_revenue_field: 'lead_annual_revenue'
+  leads_number_of_employees_field: 'lead_number_of_employees'
+  leads_street_field: 'lead_street'
+  leads_city_field: 'lead_city'
+  leads_state_field: 'lead_state'
+  leads_postal_code_field: 'lead_postal_code'
+  leads_country_field: 'lead_country'
+  
+  # Source column mappings for campaign_members table
+  campaign_members_id_field: 'campaignmember_id'
+  campaign_members_campaign_id_field: 'campaignmember_campaign_id'
+  campaign_members_lead_id_field: 'campaignmember_lead_id'
+  campaign_members_contact_id_field: 'campaignmember_contact_id'
+  campaign_members_lead_or_contact_id_field: 'campaignmember_lead_or_contact_id'
+  campaign_members_type_field: 'campaignmember_type'
+  campaign_members_status_field: 'campaignmember_status'
+  campaign_members_created_date_field: 'campaignmember_createddate'
+  campaign_members_last_modified_date_field: 'campaignmember_lastmodifieddate'
+  campaign_members_first_responded_date_field: 'campaignmember_first_responded_date'
+  campaign_members_has_responded_field: 'campaignmember_has_responded'
+  campaign_members_first_name_field: 'campaignmember_first_name'
+  campaign_members_last_name_field: 'campaignmember_last_name'
+  campaign_members_name_field: 'campaignmember_name'
+  campaign_members_salutation_field: 'campaignmember_salutation'
+  campaign_members_company_or_account_field: 'campaignmember_company_or_account'
+  campaign_members_title_field: 'campaignmember_title'
+  campaign_members_phone_field: 'campaignmember_phone'
+  campaign_members_fax_field: 'campaignmember_fax'
+  campaign_members_lead_source_field: 'campaignmember_lead_source'
+  campaign_members_description_field: 'campaignmember_description'
+  campaign_members_street_field: 'campaignmember_street'
+  campaign_members_postal_code_field: 'campaignmember_postal_code'
+  campaign_members_state_field: 'campaignmember_state'
+  campaign_members_country_field: 'campaignmember_country'
+  campaign_members_do_not_call_field: 'campaignmember_do_not_call'
+  campaign_members_has_opted_out_of_fax_field: 'campaignmember_has_opted_out_of_fax'
+  campaign_members_lead_or_contact_owner_id_field: 'campaignmember_lead_or_contact_owner_id'
+  
+  # Source column mappings for contacts table
+  contacts_id_field: 'contact_id'
+  contacts_first_name_field: 'contact_firstname'
+  contacts_last_name_field: 'contact_lastname'
+  contacts_name_field: 'contact_name'
+  contacts_salutation_field: 'contact_salutation'
+  contacts_email_field: 'contact_email'
+  contacts_phone_field: 'contact_phone'
+  contacts_mobile_phone_field: 'contact_mobilephone'
+  contacts_home_phone_field: 'contact_homephone'
+  contacts_other_phone_field: 'contact_otherphone'
+  contacts_fax_field: 'contact_fax'
+  contacts_title_field: 'contact_title'
+  contacts_department_field: 'contact_department'
+  contacts_lead_source_field: 'contact_leadsource'
+  contacts_description_field: 'contact_description'
+  contacts_created_date_field: 'contact_createddate'
+  contacts_last_modified_date_field: 'contact_lastmodifieddate'
+  contacts_birthdate_field: 'contact_birthdate'
+  contacts_last_activity_date_field: 'contact_lastactivitydate'
+  contacts_last_referenced_date_field: 'contact_lastreferenceddatetime'
+  contacts_last_viewed_date_field: 'contact_lastvieweddate'
+  contacts_email_bounced_date_field: 'contact_emailbounceddate'
+  contacts_account_id_field: 'contact_accountid'
+  contacts_is_email_bounced_field: 'contact_isemailbounced'
+  contacts_email_bounced_reason_field: 'contact_emailbouncedreason'
+  contacts_mailing_street_field: 'contact_mailingstreet'
+  contacts_mailing_city_field: 'contact_mailingcity'
+  contacts_mailing_state_field: 'contact_mailingstate'
+  contacts_mailing_postal_code_field: 'contact_mailingpostalcode'
+  contacts_mailing_country_field: 'contact_mailingcountry'
+  contacts_other_street_field: 'contact_otherstreet'
+  contacts_other_city_field: 'contact_othercity'
+  contacts_other_state_field: 'contact_otherstate'
+  contacts_other_postal_code_field: 'contact_otherpostalcode'
+  contacts_other_country_field: 'contact_othercountry'
+  contacts_owner_id_field: 'contact_ownerid'
+  contacts_reports_to_id_field: 'contact_reportstoid'
+  contacts_assistant_name_field: 'contact_assistantname'
+  contacts_assistant_phone_field: 'contact_assistantphone'
+  contacts_created_by_field: 'contact_createdby'
+  contacts_is_deleted_field: 'contact_isdeleted'
+  contacts_languages_field: 'contact_wsai__languages__c'
+  contacts_level_field: 'contact_wsai__level__c'
+  contacts_date_field: 'contact_date'
+  
+  # Source column mappings for opportunities table
+  opportunities_id_field: 'opportunity_id'
+  opportunities_name_field: 'opportunity_name'
+  opportunities_description_field: 'opportunity_description'
+  opportunities_type_field: 'opportunity_type'
+  opportunities_campaign_id_field: 'opportunity_campaign_id'
+  opportunities_account_id_field: 'opportunity_account_id'
+  opportunities_contact_id_field: 'opportunity_contact_id'
+  opportunities_stage_name_field: 'opportunity_stage_name'
+  opportunities_forecast_category_field: 'opportunity_forecast_category'
+  opportunities_forecast_category_name_field: 'opportunity_forecast_category_name'
+  opportunities_is_closed_field: 'opportunity_is_closed'
+  opportunities_is_won_field: 'opportunity_is_won'
+  opportunities_amount_field: 'opportunity_amount'
+  opportunities_probability_field: 'opportunity_probability'
+  opportunities_created_date_field: 'opportunity_created_date'
+  opportunities_created_date_fallback_field: 'opportunity_createddate'
+  opportunities_close_date_field: 'opportunity_close_date'
+  opportunities_last_modified_date_field: 'opportunity_last_modified_date'
+  opportunities_last_modified_date_fallback_field: 'opportunity_lastmodifieddate'
+  opportunities_last_activity_date_field: 'opportunity_last_activity_date'
+  opportunities_last_referenced_date_field: 'opportunity_last_referenced_date'
+  opportunities_last_viewed_date_field: 'opportunity_last_viewed_date'
+  opportunities_fiscal_field: 'opportunity_fiscal'
+  opportunities_fiscal_quarter_field: 'opportunity_fiscal_quarter'
+  opportunities_fiscal_year_field: 'opportunity_fiscal_year'
+  opportunities_has_open_activity_field: 'opportunity_has_open_activity'
+  opportunities_has_opportunity_line_item_field: 'opportunity_has_opportunity_line_item'
+  opportunities_has_overdue_task_field: 'opportunity_has_overdue_task'
+  opportunities_lead_source_field: 'opportunity_lead_source'
+  opportunities_next_step_field: 'opportunity_next_step'
+  opportunities_owner_id_field: 'opportunity_owner_id'
+  opportunities_created_by_id_field: 'opportunity_created_by_id'
+  opportunities_last_modified_by_id_field: 'opportunity_last_modified_by_id'
+  opportunities_pricebook_id_field: 'opportunity_pricebook2_id'
+  opportunities_system_modstamp_field: 'opportunity_system_modstamp'
+  opportunities_last_amount_changed_history_id_field: 'opportunity_last_amount_changed_history_id'
+  opportunities_last_close_date_changed_history_id_field: 'opportunity_last_close_date_changed_history_id'
+  opportunities_is_deleted_field: 'opportunity_is_deleted'
+  opportunities_current_generators_field: 'opportunity_wsai__currentgenerators__c'
+  opportunities_delivery_installation_status_field: 'opportunity_wsai__deliveryinstallationstatus__c'
+  opportunities_main_competitors_field: 'opportunity_wsai__maincompetitors__c'
+  opportunities_order_number_field: 'opportunity_wsai__ordernumber__c'
+  opportunities_tracking_number_field: 'opportunity_wsai__trackingnumber__c'
+  
+  # Configurable picklist values for data quality tests
+  # Override these in your profiles.yml or dbt_project.yml to match your Salesforce org's picklist values
+  salesforce_campaign_types:
+    - 'Email'
+    - 'Advertisement'
+    - 'Banner Ads'
+    - 'Direct Mail'
+    - 'Telemarketing'
+    - 'Public Relations'
+    - 'Partners'
+    - 'Referral Program'
+    - 'Trade Show'
+    - 'Web'
+    - 'Webinar'
+    - 'Content Syndication'
+    - 'Social'
+    - 'Conference'
+    - 'Other'
+  
+  salesforce_campaign_statuses:
+    - 'Planned'
+    - 'In Progress'
+    - 'Completed'
+    - 'Aborted'
+    - 'On Hold'
+  
+  salesforce_lead_statuses:
+    - 'Open - Not Contacted'
+    - 'Working - Contacted'
+    - 'Closed - Converted'
+    - 'Closed - Not Converted'
+    - 'Nurturing'
+    - 'Qualified'
+    - 'Unqualified'
+  
+  salesforce_lead_ratings:
+    - 'Hot'
+    - 'Warm'
+    - 'Cold'
+  
+  salesforce_opportunity_stages:
+    - 'Prospecting'
+    - 'Qualification'
+    - 'Needs Analysis'
+    - 'Value Proposition'
+    - 'Id. Decision Makers'
+    - 'Perception Analysis'
+    - 'Proposal/Price Quote'
+    - 'Negotiation/Review'
+    - 'Closed Won'
+    - 'Closed Lost'
+  
+  salesforce_campaign_member_statuses:
+    - 'Sent'
+    - 'Responded'
+    - 'Clicked'
+    - 'Opened'
+    - 'Bounced'
+    - 'Unsubscribed'
+  
+  salesforce_campaign_member_types:
+    - 'Lead'
+    - 'Contact'
