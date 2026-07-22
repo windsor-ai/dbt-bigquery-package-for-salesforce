@@ -31,7 +31,7 @@ This package transforms raw Salesforce data into clean, analytics ready tables m
 
 Before using this package, you have to integrate Salesforce data into BigQuery using the [Windsor.ai connector](https://windsor.ai/connect/salesforce-google-bigquery-integration/) to ensure the schema matches the expected format:
 
-1. [Sign up](https://onboard.windsor.ai/) for Windsor.ai's free trial.
+1. [Sign up](https://onboard.windsor.ai/) for Windsor.ai's free forever plan.
 2. Connect your Salesforce account(s).
 3. Choose BigQuery as a data destination.
 4. Create and run a destination task for each of the 5 required tables by selecting specific fields. You can use the Report Presets dropdown to automatically select the necessary fields for each model (campaigns, leads, contacts, campaign_members, opportunities).
